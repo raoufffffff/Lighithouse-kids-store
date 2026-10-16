@@ -3,7 +3,9 @@
   "private": true,
   "version": "1.0.0",
   "scripts": {
+    "predev": "node scripts/build-communes.mjs",
     "dev": "next dev",
+    "prebuild": "node scripts/build-communes.mjs",
     "build": "next build",
     "start": "next start"
   },

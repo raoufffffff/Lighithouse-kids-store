@@ -26,6 +26,8 @@ const ERRORS: Record<string, string> = {
   product_unavailable: 'هذا المنتج لم يعد متوفراً',
 }
 
+type Commune = { name: string; desk: boolean }
+
 const uniq = (a: (string | null)[]) => Array.from(new Set(a.filter((x): x is string => !!x)))
 const inStock = (v: Variant) => v.stock_quantity > 0
 
@@ -41,6 +43,8 @@ export default function OrderForm({ productId, productName, basePrice, variants,
   const [phone, setPhone] = useState('')
   const [wilaya, setWilaya] = useState('')
   const [commune, setCommune] = useState('')
+  const [communes, setCommunes] = useState<Commune[] | 'loading' | 'error'>([])
+  const communeCache = useRef(new Map<string, Commune[]>())
   const [address, setAddress] = useState('')
   const [dtype, setDtype] = useState<'home' | 'desk'>('home')
   const [honey, setHoney] = useState('')
@@ -60,6 +64,9 @@ export default function OrderForm({ productId, productName, basePrice, variants,
   const unitPrice = variant?.price ?? basePrice
   const maxQty = Math.max(1, Math.min(10, variant ? variant.stock_quantity : 10))
   const rate = rates.find((r) => String(r.code) === wilaya)
+  const selectedCommune = Array.isArray(communes) ? communes.find((c) => c.name === commune) : undefined
+  // Stop-desk delivery is only offered where the commune has a desk.
+  const deskBlocked = selectedCommune ? !selectedCommune.desk : false
   const fee = rate ? (dtype === 'home' ? rate.home : rate.desk) : null
   const subtotal = unitPrice * qty
   const total = subtotal + (fee ?? 0)
@@ -71,6 +78,29 @@ export default function OrderForm({ productId, productName, basePrice, variants,
   useEffect(() => {
     if (qty > maxQty) setQty(maxQty)
   }, [maxQty, qty])
+
+  useEffect(() => {
+    if (deskBlocked && dtype === 'desk') setDtype('home')
+  }, [deskBlocked, dtype])
+
+  const pickWilaya = async (code: string) => {
+    setWilaya(code)
+    setCommune('')
+    if (!code) return setCommunes([])
+    const cached = communeCache.current.get(code)
+    if (cached) return setCommunes(cached)
+    setCommunes('loading')
+    try {
+      const res = await fetch(`/communes/${code}.json`)
+      if (!res.ok) throw new Error('bad status')
+      const rows = (await res.json()) as [string, number][]
+      const list = rows.map(([name, desk]) => ({ name, desk: desk === 1 }))
+      communeCache.current.set(code, list)
+      setCommunes((cur) => (cur === 'loading' ? list : cur))
+    } catch {
+      setCommunes('error')
+    }
+  }
 
   const colorAvailable = (c: string) => variants.some((v) => v.color === c && inStock(v))
   const sizeAvailable = (s: string) => variants.some((v) => v.size === s && inStock(v) && (!color || v.color === color))
@@ -103,6 +133,7 @@ export default function OrderForm({ productId, productName, basePrice, variants,
     if (!/^0[567]\d{8}$/.test(cleanPhone)) return setError(ERRORS.invalid_phone)
     if (!wilaya) return setError(ERRORS.invalid_wilaya)
     if (commune.trim().length < 2) return setError(ERRORS.invalid_commune)
+    if (dtype === 'desk' && deskBlocked) return setError('لا يوجد مكتب توصيل في هذه البلدية')
     if (hasVariants && (!variant || !inStock(variant))) return setError(ERRORS.variant_required)
 
     setStatus('sending')
@@ -208,13 +239,31 @@ export default function OrderForm({ productId, productName, basePrice, variants,
         <div className="space-y-3 border-t border-brand-100 pt-4">
           <input className={inputCls} placeholder="الاسم الكامل" autoComplete="name" value={name} onChange={(e) => setName(e.target.value)} />
           <input className={inputCls} placeholder="رقم الهاتف (0555 12 34 56)" type="tel" inputMode="tel" autoComplete="tel" dir="ltr" style={{ textAlign: 'right' }} value={phone} onChange={(e) => setPhone(e.target.value)} />
-          <select className={inputCls} value={wilaya} onChange={(e) => setWilaya(e.target.value)} aria-label="الولاية">
+          <select className={inputCls} value={wilaya} onChange={(e) => pickWilaya(e.target.value)} aria-label="الولاية">
             <option value="">اختر الولاية</option>
             {rates.map((r) => (
               <option key={r.code} value={r.code}>{`\u202A${String(r.code).padStart(2, '0')} - ${r.name}\u202C`}</option>
             ))}
           </select>
-          <input className={inputCls} placeholder="البلدية" autoComplete="address-level2" value={commune} onChange={(e) => setCommune(e.target.value)} />
+          {communes === 'error' ? (
+            <input className={inputCls} placeholder="البلدية" autoComplete="address-level2" value={commune} onChange={(e) => setCommune(e.target.value)} />
+          ) : (
+            <select
+              className={inputCls}
+              value={commune}
+              onChange={(e) => setCommune(e.target.value)}
+              disabled={!wilaya || communes === 'loading'}
+              aria-label="البلدية"
+            >
+              <option value="">
+                {!wilaya ? 'اختر الولاية أولاً' : communes === 'loading' ? 'جارٍ تحميل البلديات…' : 'اختر البلدية'}
+              </option>
+              {Array.isArray(communes) &&
+                communes.map((c) => (
+                  <option key={c.name} value={c.name}>{c.name}</option>
+                ))}
+            </select>
+          )}
 
           {rate && (
             <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label="طريقة التوصيل">
@@ -224,14 +273,26 @@ export default function OrderForm({ productId, productName, basePrice, variants,
                   type="button"
                   role="radio"
                   aria-checked={dtype === val}
+                  disabled={val === 'desk' && deskBlocked}
                   onClick={() => setDtype(val)}
-                  className={`rounded-xl border-2 p-3 text-center transition ${dtype === val ? 'border-brand-600 bg-brand-50' : 'border-brand-200 bg-white'}`}
+                  className={`rounded-xl border-2 p-3 text-center transition ${
+                    val === 'desk' && deskBlocked
+                      ? 'cursor-not-allowed border-slate-200 bg-slate-50 opacity-60'
+                      : dtype === val
+                        ? 'border-brand-600 bg-brand-50'
+                        : 'border-brand-200 bg-white'
+                  }`}
                 >
                   <span className="block text-sm font-bold text-ink">{label}</span>
-                  <span className="block text-base font-extrabold text-brand-600">{price === 0 ? 'مجاني' : dzd(price)}</span>
+                  <span className="block text-base font-extrabold text-brand-600">
+                    {val === 'desk' && deskBlocked ? 'غير متوفر' : price === 0 ? 'مجاني' : dzd(price)}
+                  </span>
                 </button>
               ))}
             </div>
+          )}
+          {rate && deskBlocked && (
+            <p className="-mt-1 text-xs font-semibold text-slate-500">لا يوجد مكتب توصيل في هذه البلدية، التوصيل للمنزل فقط.</p>
           )}
           {rate && dtype === 'home' && (
             <input className={inputCls} placeholder="العنوان (اختياري)" autoComplete="street-address" value={address} onChange={(e) => setAddress(e.target.value)} />
