@@ -1,0 +1,47 @@
+@import "tailwindcss";
+@import "@fontsource-variable/cairo/wght.css";
+
+@theme {
+  --font-sans: "Cairo Variable", "Segoe UI", Tahoma, system-ui, sans-serif;
+  /* Palette taken from the Lighthouse Toys logo */
+  --color-ink: #12304f;
+  --color-brand-50: #eef5fb;
+  --color-brand-100: #d9e8f5;
+  --color-brand-200: #b8d4ec;
+  --color-brand-500: #2f6aa3;
+  --color-brand-600: #24578a;
+  --color-brand-700: #1c4670;
+  --color-sun-300: #fbd06b;
+  --color-sun-400: #f5b83d;
+  --color-orange-400: #f59a2e;
+  --color-orange-500: #ec8412;
+}
+
+html {
+  scroll-behavior: smooth;
+  -webkit-text-size-adjust: 100%;
+}
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  .pulse-cta { animation: none !important; }
+}
+
+body {
+  margin: 0;
+  background: #f6f9fc;
+  color: #1c2b3a;
+  font-family: var(--font-sans);
+  line-height: 1.6;
+}
+
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+
+.pulse-cta { animation: pulse-cta 2.4s ease-in-out infinite; }
+@keyframes pulse-cta {
+  0%, 100% { box-shadow: 0 8px 20px -6px rgb(236 132 18 / 0.55); }
+  50% { box-shadow: 0 8px 28px -2px rgb(236 132 18 / 0.85); }
+}
+
+.no-scrollbar { scrollbar-width: none; }
+.no-scrollbar::-webkit-scrollbar { display: none; }
