@@ -4,9 +4,9 @@ import { useEffect, useState } from 'react'
 import ProductView from '@/components/ProductView'
 import { normalizePageContent } from '@/lib/page-content'
 import type { PageContent } from '@/lib/page-content'
-import type { Product, Rate, Variant } from '@/lib/types'
+import type { PageCode, Product, Rate, Variant } from '@/lib/types'
 
-type PreviewData = { product: Product; rates: Rate[]; content: PageContent | null }
+type PreviewData = { product: Product; rates: Rate[]; content: PageContent | null; code: PageCode | null }
 
 const num = (v: unknown, d = 0) => (typeof v === 'number' && Number.isFinite(v) ? v : Number(v) || d)
 const text = (v: unknown) => (typeof v === 'string' ? v : '')
@@ -44,9 +44,14 @@ function coerce(msg: Record<string, unknown>): PreviewData {
       landing_position: p.landing_position === 'above' ? 'above' : 'below',
       variants,
       page_content: null,
+      page_code: null,
     },
     rates,
     content: normalizePageContent(msg.content),
+    code: (() => {
+      const c = rec(msg.content)
+      return c.v === 2 && typeof c.js === 'string' && c.js.length <= 400_000 ? ({ v: 2, js: c.js } as PageCode) : null
+    })(),
   }
 }
 
@@ -84,5 +89,12 @@ export default function PreviewClient() {
     )
   }
 
-  return <ProductView product={data.product} rates={data.rates} content={data.content} preview />
+  return <ProductView
+      product={data.product}
+      rates={data.rates}
+      content={data.content}
+      code={data.code}
+      preview
+      onCodeError={(message) => window.parent.postMessage({ type: 'lh-preview:error', message }, '*')}
+    />
 }

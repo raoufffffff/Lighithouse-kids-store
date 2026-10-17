@@ -1,4 +1,4 @@
-import type { Pixels, Product, ProductCardData, Rate, StoreInfo, Variant } from './types'
+import type { PageCode, Pixels, Product, ProductCardData, Rate, StoreInfo, Variant } from './types'
 
 import { normalizePageContent } from './page-content'
 import { SUPABASE_KEY, SUPABASE_URL } from './public-env'
@@ -97,6 +97,16 @@ type ProductFull = Omit<ProductRow, 'lh_categories'> & {
   }[]
 }
 
+const MAX_CODE_BYTES = 400_000
+
+/** v2 pages carry compiled JS; accept only the expected shape and a sane size. */
+function parseCode(raw: unknown): PageCode | null {
+  const r = raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : null
+  if (!r || r.v !== 2 || typeof r.js !== 'string') return null
+  const js = r.js.trim()
+  return js && js.length <= MAX_CODE_BYTES ? { v: 2, js } : null
+}
+
 export async function getProduct(slug: string): Promise<Product | null> {
   const select = (withContent: boolean) =>
     'lh_products?select=id,name,slug,description,base_price,compare_at_price,images,landing_images,landing_position,' +
@@ -133,6 +143,7 @@ export async function getProduct(slug: string): Promise<Product | null> {
     landing_position: r.landing_position === 'above' ? 'above' : 'below',
     variants,
     page_content: normalizePageContent(r.page_content),
+    page_code: parseCode(r.page_content),
   }
 }
 

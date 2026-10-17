@@ -1,13 +1,14 @@
 import type { CSSProperties } from 'react'
 import Image from 'next/image'
 import Gallery from '@/components/Gallery'
+import LandingRunner from '@/components/LandingRunner'
 import OrderForm from '@/components/OrderForm'
 import PageSections from '@/components/PageSections'
 import StickyOrder from '@/components/StickyOrder'
 import { discountPercent, dzd } from '@/lib/format'
 import { ACCENT_VARS } from '@/lib/page-content'
 import type { PageContent } from '@/lib/page-content'
-import type { Product, Rate } from '@/lib/types'
+import type { PageCode, Product, Rate } from '@/lib/types'
 
 /**
  * The product page layout, shared by the real page (/p/[slug]) and the admin preview (/preview)
@@ -49,15 +50,35 @@ function Description({ product }: { product: Product }) {
   )
 }
 
-export default function ProductView({
+export default function ProductView(props: Parameters<typeof ClassicView>[0]) {
+  const { code, product, rates, preview, onCodeError } = props
+  if (!code) return <ClassicView {...props} />
+  return (
+    <LandingRunner
+      js={code.js}
+      product={product}
+      rates={rates}
+      preview={preview}
+      onError={onCodeError}
+      fallback={<ClassicView {...props} code={null} />}
+    />
+  )
+}
+
+function ClassicView({
   product,
   rates,
   content,
+  code = null,
   preview = false,
+  onCodeError,
 }: {
   product: Product
   rates: Rate[]
   content: PageContent | null
+  /** AI-designed page (compiled JS). When present and runnable it replaces the whole layout below. */
+  code?: PageCode | null
+  onCodeError?: (message: string) => void
   /** Admin preview: the order form is shown but cannot be used, so no test orders are created. */
   preview?: boolean
 }) {

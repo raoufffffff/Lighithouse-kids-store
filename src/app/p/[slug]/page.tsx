@@ -36,5 +36,5 @@ export default async function ProductPage({ params }: Params) {
   const [product, rates] = await Promise.all([getProduct(slug), getRates()])
   if (!product) notFound()
 
-  return <ProductView product={product} rates={rates} content={product.page_content} />
+  return <ProductView product={product} rates={rates} content={product.page_content} code={product.page_code} />
 }
