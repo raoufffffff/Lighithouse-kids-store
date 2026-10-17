@@ -1,5 +1,6 @@
 import type { Pixels, Product, ProductCardData, Rate, StoreInfo, Variant } from './types'
 
+import { normalizePageContent } from './page-content'
 import { SUPABASE_KEY, SUPABASE_URL } from './public-env'
 
 export { SUPABASE_KEY, SUPABASE_URL }
@@ -86,6 +87,7 @@ type ProductFull = Omit<ProductRow, 'lh_categories'> & {
   description: string | null
   landing_images: string[] | null
   landing_position: string
+  page_content?: unknown
   lh_product_variants: {
     id: string
     size: string | null
@@ -96,11 +98,20 @@ type ProductFull = Omit<ProductRow, 'lh_categories'> & {
 }
 
 export async function getProduct(slug: string): Promise<Product | null> {
-  const rows = await rest<ProductFull[]>(
+  const select = (withContent: boolean) =>
     'lh_products?select=id,name,slug,description,base_price,compare_at_price,images,landing_images,landing_position,' +
-      'lh_product_variants(id,size,color,price,stock_quantity)' +
-      `&is_active=eq.true&slug=eq.${encodeURIComponent(slug)}&limit=1`,
-  )
+    (withContent ? 'page_content,' : '') +
+    'lh_product_variants(id,size,color,price,stock_quantity)' +
+    `&is_active=eq.true&slug=eq.${encodeURIComponent(slug)}&limit=1`
+
+  let rows: ProductFull[]
+  try {
+    rows = await rest<ProductFull[]>(select(true))
+  } catch {
+    // Deploy-order safety: if the database does not have the page-builder column yet, keep the
+    // classic layout instead of failing the whole build. A real outage fails here as well.
+    rows = await rest<ProductFull[]>(select(false))
+  }
   const r = rows[0]
   if (!r) return null
   const variants: Variant[] = (r.lh_product_variants ?? []).map((v) => ({
@@ -121,6 +132,7 @@ export async function getProduct(slug: string): Promise<Product | null> {
     landing_images: r.landing_images ?? [],
     landing_position: r.landing_position === 'above' ? 'above' : 'below',
     variants,
+    page_content: normalizePageContent(r.page_content),
   }
 }
 

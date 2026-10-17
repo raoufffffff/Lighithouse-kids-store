@@ -1,3 +1,5 @@
+import type { PageContent } from './page-content'
+
 export type StoreInfo = { name: string; tagline: string; logo_url: string }
 
 export type Pixels = { facebook: string | null; tiktok: string | null }
@@ -32,6 +34,8 @@ export type Product = {
   landing_images: string[]
   landing_position: 'above' | 'below'
   variants: Variant[]
+  /** Published structured page (page builder). null = use the classic layout. */
+  page_content: PageContent | null
 }
 
 export type Rate = { code: number; name: string; home: number; desk: number }
