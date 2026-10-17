@@ -5,6 +5,7 @@ import LandingRunner from '@/components/LandingRunner'
 import OrderForm from '@/components/OrderForm'
 import PageSections from '@/components/PageSections'
 import StickyOrder from '@/components/StickyOrder'
+import ZoomRoot from '@/components/ZoomRoot'
 import { discountPercent, dzd } from '@/lib/format'
 import { ACCENT_VARS } from '@/lib/page-content'
 import type { PageContent } from '@/lib/page-content'
@@ -52,8 +53,9 @@ function Description({ product }: { product: Product }) {
 
 export default function ProductView(props: Parameters<typeof ClassicView>[0]) {
   const { code, product, rates, preview, onCodeError } = props
-  if (!code) return <ClassicView {...props} />
+  if (!code) return <ZoomRoot><ClassicView {...props} /></ZoomRoot>
   return (
+    <ZoomRoot>
     <LandingRunner
       js={code.js}
       product={product}
@@ -62,6 +64,7 @@ export default function ProductView(props: Parameters<typeof ClassicView>[0]) {
       onError={onCodeError}
       fallback={<ClassicView {...props} code={null} />}
     />
+    </ZoomRoot>
   )
 }
 

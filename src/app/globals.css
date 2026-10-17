@@ -45,3 +45,7 @@ input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; marg
 
 .no-scrollbar { scrollbar-width: none; }
 .no-scrollbar::-webkit-scrollbar { display: none; }
+
+/* Pictures open in the zoom viewer (see ZoomRoot). */
+[data-zoom-root] img { cursor: zoom-in; }
+[data-zoom-root] :is(a, button, [data-no-zoom]) img { cursor: inherit; }
