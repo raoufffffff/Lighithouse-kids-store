@@ -1,7 +1,8 @@
 'use client'
 
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useContext, useEffect, useMemo, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
+import { AbContext, abTrack } from '@/lib/ab'
 import { SUPABASE_KEY, SUPABASE_URL } from '@/lib/public-env'
 import { track } from '@/lib/track'
 import type { Rate, Variant } from '@/lib/types'
@@ -32,6 +33,7 @@ const inStock = (v: Variant) => v.stock_quantity > 0
 
 /** All order-form state and behaviour, shared by the classic OrderForm and AI-generated pages. */
 export function useCheckout({ productId, productName, basePrice, variants, rates }: CheckoutInput) {
+  const ab = useContext(AbContext)
   const firstAvailable = variants.find(inStock)
   const [color, setColor] = useState<string>(firstAvailable?.color ?? '')
   const [size, setSize] = useState<string>(firstAvailable?.size ?? '')
@@ -155,6 +157,7 @@ export function useCheckout({ productId, productName, basePrice, variants, rates
       }
       setDone({ number: body.order_number, total: body.total })
       setStatus('done')
+      if (ab && body.order_number > 0) abTrack(ab.variantId, 'order', body.order_number)
       track('Purchase', { content_ids: [productId], value: body.total, currency: 'DZD' })
       setTimeout(() => doneRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 50)
     } catch {

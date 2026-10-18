@@ -1,6 +1,6 @@
 import { revalidatePath } from 'next/cache'
 import { after } from 'next/server'
-import { getProducts, SUPABASE_KEY, SUPABASE_URL } from '@/lib/data'
+import { getAbSlugs, getProducts, SUPABASE_KEY, SUPABASE_URL } from '@/lib/data'
 
 export const dynamic = 'force-dynamic'
 
@@ -51,6 +51,8 @@ export async function POST(req: Request) {
       await Promise.all(
         products.slice(0, 30).map((p) => fetch(`${origin}/p/${encodeURIComponent(p.slug)}`, { cache: 'no-store' })),
       )
+      const abSlugs = await getAbSlugs()
+      await Promise.all(abSlugs.slice(0, 30).map((s) => fetch(`${origin}/ab/${encodeURIComponent(s)}`, { cache: 'no-store' })))
     } catch {
       /* warming is best-effort */
     }

@@ -100,7 +100,7 @@ type ProductFull = Omit<ProductRow, 'lh_categories'> & {
 const MAX_CODE_BYTES = 400_000
 
 /** v2 pages carry compiled JS; accept only the expected shape and a sane size. */
-function parseCode(raw: unknown): PageCode | null {
+export function parseCode(raw: unknown): PageCode | null {
   const r = raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : null
   if (!r || r.v !== 2 || typeof r.js !== 'string') return null
   const js = r.js.trim()
@@ -157,4 +157,31 @@ export async function getRates(): Promise<Rate[]> {
     home: Number(r.home_fee),
     desk: Number(r.desk_fee),
   }))
+}
+
+export type AbVariant = { id: string; label: string; content: unknown }
+export type AbTest = { id: string; slug: string; name: string; product: Product; variants: AbVariant[] }
+
+export async function getAbSlugs(): Promise<string[]> {
+  try {
+    const rows = await rest<{ slug: string }[]>('lh_ab_tests?select=slug&is_active=eq.true')
+    return rows.map((r) => r.slug)
+  } catch {
+    return [] // table not migrated yet: no test pages
+  }
+}
+
+export async function getAbTest(slug: string): Promise<AbTest | null> {
+  const tests = await rest<{ id: string; product_id: string; slug: string; name: string }[]>(
+    `lh_ab_tests?select=id,product_id,slug,name&is_active=eq.true&slug=eq.${encodeURIComponent(slug)}&limit=1`,
+  )
+  const t = tests[0]
+  if (!t) return null
+  const [variants, prod] = await Promise.all([
+    rest<AbVariant[]>(`lh_ab_variants?select=id,label,content&test_id=eq.${t.id}&is_active=eq.true&order=position,created_at`),
+    rest<{ slug: string }[]>(`lh_products?select=slug&id=eq.${t.product_id}&is_active=eq.true&limit=1`),
+  ])
+  if (!prod[0] || variants.length === 0) return null
+  const product = await getProduct(prod[0].slug)
+  return product ? { id: t.id, slug: t.slug, name: t.name, product, variants } : null
 }
