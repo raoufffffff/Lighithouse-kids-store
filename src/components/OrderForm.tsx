@@ -2,13 +2,14 @@
 
 import { useCheckout } from '@/lib/useCheckout'
 import { dzd } from '@/lib/format'
-import type { Rate, Variant } from '@/lib/types'
+import type { Offer, Rate, Variant } from '@/lib/types'
 
 type Props = {
   productId: string
   productName: string
   basePrice: number
   variants: Variant[]
+  offers?: Offer[]
   rates: Rate[]
 }
 
@@ -24,6 +25,7 @@ export default function OrderForm(props: Props) {
     wilaya, pickWilaya, commune, setCommune, communes,
     address, setAddress, dtype, setDtype, honey, setHoney,
     rate, deskBlocked, fee, subtotal, total,
+    offers, activeOffer, pickOffer, unitPrice,
     status, error, done, doneRef, submit, begin,
   } = useCheckout(props)
 
@@ -86,6 +88,29 @@ export default function OrderForm(props: Props) {
         )}
         {hasVariants && !firstAvailable && (
           <p className="rounded-xl bg-rose-50 p-3 text-sm font-bold text-rose-700">نفدت الكمية حالياً.</p>
+        )}
+
+        {offers.length > 0 && (
+          <fieldset className="space-y-2">
+            <legend className="mb-1 text-sm font-bold text-ink">عروض الكمية</legend>
+            {[{ qty: 1, total: unitPrice, label: null as string | null, saving: 0, perUnit: unitPrice }, ...offers].map((o) => (
+              <button
+                key={o.qty}
+                type="button"
+                onClick={() => pickOffer(o.qty)}
+                aria-pressed={qty === o.qty}
+                className={`flex w-full items-center justify-between rounded-xl border-2 px-4 py-3 text-start transition ${
+                  qty === o.qty ? 'border-brand-500 bg-brand-50' : 'border-brand-100 bg-white'
+                }`}
+              >
+                <span className="text-sm font-extrabold text-ink">
+                  {o.qty === 1 ? 'قطعة واحدة' : o.label || `${o.qty} قطع`}
+                  {o.saving > 0 && <span className="mr-2 rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-bold text-emerald-700">وفّر {dzd(o.saving)}</span>}
+                </span>
+                <span className="text-base font-extrabold text-brand-600">{dzd(o.total)}</span>
+              </button>
+            ))}
+          </fieldset>
         )}
 
         <div className="flex items-center justify-between">

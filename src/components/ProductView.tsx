@@ -144,6 +144,7 @@ function ClassicView({
                     productName={product.name}
                     basePrice={product.base_price}
                     variants={product.variants}
+                    offers={product.offers}
                     rates={rates}
                   />
                 </div>
@@ -157,6 +158,7 @@ function ClassicView({
                 productName={product.name}
                 basePrice={product.base_price}
                 variants={product.variants}
+                offers={product.offers}
                 rates={rates}
               />
             )}

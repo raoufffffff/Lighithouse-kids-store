@@ -26,6 +26,8 @@ export type Variant = {
   stock_quantity: number
 }
 
+export type Offer = { qty: number; total: number; label: string | null }
+
 export type Product = {
   id: string
   name: string
@@ -37,6 +39,8 @@ export type Product = {
   landing_images: string[]
   landing_position: 'above' | 'below'
   variants: Variant[]
+  /** Quantity offers ("buy 2 for X"). Priced again on the server. */
+  offers: Offer[]
   /** Published structured page (page builder). null = use the classic layout. */
   page_content: PageContent | null
   /** Published AI-designed page. Takes priority over page_content. */

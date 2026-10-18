@@ -5,13 +5,14 @@ import type { FormEvent } from 'react'
 import { AbContext, abTrack, cartDone, cartSession, saveCart } from '@/lib/ab'
 import { SUPABASE_KEY, SUPABASE_URL } from '@/lib/public-env'
 import { track } from '@/lib/track'
-import type { Rate, Variant } from '@/lib/types'
+import type { Offer, Rate, Variant } from '@/lib/types'
 
 export type CheckoutInput = {
   productId: string
   productName: string
   basePrice: number
   variants: Variant[]
+  offers?: Offer[]
   rates: Rate[]
 }
 
@@ -32,7 +33,7 @@ const uniq = (a: (string | null)[]) => Array.from(new Set(a.filter((x): x is str
 const inStock = (v: Variant) => v.stock_quantity > 0
 
 /** All order-form state and behaviour, shared by the classic OrderForm and AI-generated pages. */
-export function useCheckout({ productId, productName, basePrice, variants, rates }: CheckoutInput) {
+export function useCheckout({ productId, productName, basePrice, variants, offers = [], rates }: CheckoutInput) {
   const ab = useContext(AbContext)
   const firstAvailable = variants.find(inStock)
   const [color, setColor] = useState<string>(firstAvailable?.color ?? '')
@@ -67,7 +68,14 @@ export function useCheckout({ productId, productName, basePrice, variants, rates
   // Stop-desk delivery is only offered where the commune has a desk.
   const deskBlocked = selectedCommune ? !selectedCommune.desk : false
   const fee = rate ? (dtype === 'home' ? rate.home : rate.desk) : null
-  const subtotal = unitPrice * qty
+  // Quantity offers. Hidden when the chosen variant has too little stock (maxQty follows the variant's stock)
+  // or its own price; the server prices them again, so this is only what the visitor sees.
+  const offersView = (variant?.price != null ? [] : offers)
+    .filter((o) => o.qty >= 2 && o.qty <= maxQty)
+    .map((o) => ({ ...o, saving: Math.max(0, unitPrice * o.qty - o.total), perUnit: Math.round(o.total / o.qty) }))
+  const activeOffer = offersView.find((o) => o.qty === qty) ?? null
+  const pickOffer = (q: number) => setQty(Math.max(1, Math.min(maxQty, q)))
+  const subtotal = activeOffer ? activeOffer.total : unitPrice * qty
   const total = subtotal + (fee ?? 0)
 
   useEffect(() => {
@@ -200,6 +208,7 @@ export function useCheckout({ productId, productName, basePrice, variants, rates
     wilaya, pickWilaya, commune, setCommune, communes,
     address, setAddress, dtype, setDtype, honey, setHoney,
     rate, deskBlocked, fee, unitPrice, subtotal, total,
+    offers: offersView, activeOffer, pickOffer,
     status, error, done, doneRef, submit, begin,
   }
 }

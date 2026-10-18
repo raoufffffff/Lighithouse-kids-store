@@ -51,6 +51,7 @@ function Runner({ Comp, product, rates }: { Comp: NonNullable<Loaded['Comp']>; p
     productName: product.name,
     basePrice: product.base_price,
     variants: product.variants,
+    offers: product.offers,
     rates,
   })
 
@@ -87,6 +88,9 @@ function Runner({ Comp, product, rates }: { Comp: NonNullable<Loaded['Comp']>; p
     setDeliveryType: c.setDtype,
     deskBlocked: c.deskBlocked,
     fee: c.fee,
+    offers: c.offers,
+    activeOffer: c.activeOffer,
+    pickOffer: c.pickOffer,
     unitPrice: c.unitPrice,
     subtotal: c.subtotal,
     total: c.total,

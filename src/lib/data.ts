@@ -1,4 +1,4 @@
-import type { PageCode, Pixels, Product, ProductCardData, Rate, StoreInfo, Variant } from './types'
+import type { Offer, PageCode, Pixels, Product, ProductCardData, Rate, StoreInfo, Variant } from './types'
 
 import { normalizePageContent } from './page-content'
 import { SUPABASE_KEY, SUPABASE_URL } from './public-env'
@@ -124,6 +124,15 @@ export async function getProduct(slug: string): Promise<Product | null> {
   }
   const r = rows[0]
   if (!r) return null
+  let offers: Offer[] = []
+  try {
+    const o = await rest<{ qty: number; total_price: number | string; label: string | null }[]>(
+      `lh_product_offers?select=qty,total_price,label&product_id=eq.${r.id}&is_active=eq.true&order=qty`,
+    )
+    offers = o.map((x) => ({ qty: x.qty, total: Number(x.total_price), label: x.label }))
+  } catch {
+    /* offers table not migrated yet: no offers */
+  }
   const variants: Variant[] = (r.lh_product_variants ?? []).map((v) => ({
     id: v.id,
     size: v.size,
@@ -142,6 +151,7 @@ export async function getProduct(slug: string): Promise<Product | null> {
     landing_images: r.landing_images ?? [],
     landing_position: r.landing_position === 'above' ? 'above' : 'below',
     variants,
+    offers,
     page_content: normalizePageContent(r.page_content),
     page_code: parseCode(r.page_content),
   }

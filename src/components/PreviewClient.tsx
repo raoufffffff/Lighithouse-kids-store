@@ -43,6 +43,10 @@ function coerce(msg: Record<string, unknown>): PreviewData {
       landing_images: strings(p.landing_images),
       landing_position: p.landing_position === 'above' ? 'above' : 'below',
       variants,
+      offers: (Array.isArray(p.offers) ? p.offers : []).map((x) => {
+        const o = rec(x)
+        return { qty: num(o.qty), total: num(o.total), label: text(o.label) || null }
+      }),
       page_content: null,
       page_code: null,
     },
