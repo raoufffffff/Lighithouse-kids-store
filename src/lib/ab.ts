@@ -20,3 +20,34 @@ export function abTrack(variantId: string, kind: 'view' | 'order', orderNumber?:
     /* tracking must never break the page */
   }
 }
+
+const rpc = (fn: string, body: unknown) => {
+  try {
+    if (!SUPABASE_URL || !SUPABASE_KEY) return
+    void fetch(`${SUPABASE_URL}/rest/v1/rpc/${fn}`, {
+      method: 'POST',
+      keepalive: true,
+      headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    }).catch(() => {})
+  } catch {
+    /* best effort */
+  }
+}
+
+/** One random id per browser, used to keep a single abandoned-cart row per visitor. */
+export function cartSession(): string {
+  try {
+    let id = localStorage.getItem('lh_cart_sid')
+    if (!id) {
+      id = (crypto.randomUUID?.() ?? Math.random().toString(36).slice(2) + Date.now().toString(36)).replace(/[^a-zA-Z0-9-]/g, '')
+      localStorage.setItem('lh_cart_sid', id)
+    }
+    return id
+  } catch {
+    return ''
+  }
+}
+
+export const saveCart = (body: Record<string, unknown>) => rpc('lh_save_cart', body)
+export const cartDone = (session: string) => session && rpc('lh_cart_done', { p_session: session })

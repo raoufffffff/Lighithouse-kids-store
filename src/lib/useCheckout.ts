@@ -2,7 +2,7 @@
 
 import { useContext, useEffect, useMemo, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
-import { AbContext, abTrack } from '@/lib/ab'
+import { AbContext, abTrack, cartDone, cartSession, saveCart } from '@/lib/ab'
 import { SUPABASE_KEY, SUPABASE_URL } from '@/lib/public-env'
 import { track } from '@/lib/track'
 import type { Rate, Variant } from '@/lib/types'
@@ -111,6 +111,31 @@ export function useCheckout({ productId, productName, basePrice, variants, rates
     if (match) setSize(match.size ?? '')
   }
 
+  // Abandoned-cart capture: only once name, a valid phone, wilaya and commune are all entered.
+  const cleanPhoneNow = phone.replace(/[\s.\-]/g, '')
+  const cartReady = name.trim().length >= 2 && /^0[567]\d{8}$/.test(cleanPhoneNow) && wilaya !== '' && commune.trim().length >= 2 && !honey
+  const abId = ab?.variantId ?? null
+  useEffect(() => {
+    if (!cartReady || status !== 'idle') return
+    const sid = cartSession()
+    if (!sid) return
+    const t = setTimeout(() => {
+      saveCart({
+        p_session: sid,
+        p_product: productId,
+        p_variant: variant?.id ?? null,
+        p_qty: qty,
+        p_name: name.trim(),
+        p_phone: cleanPhoneNow,
+        p_wilaya: Number(wilaya),
+        p_commune: commune.trim(),
+        p_delivery_type: dtype,
+        p_ab: abId,
+      })
+    }, 1500)
+    return () => clearTimeout(t)
+  }, [cartReady, status, productId, variant?.id, qty, name, cleanPhoneNow, wilaya, commune, dtype, abId])
+
   const begin = () => {
     if (started.current) return
     started.current = true
@@ -157,6 +182,7 @@ export function useCheckout({ productId, productName, basePrice, variants, rates
       }
       setDone({ number: body.order_number, total: body.total })
       setStatus('done')
+      cartDone(cartSession())
       if (ab && body.order_number > 0) abTrack(ab.variantId, 'order', body.order_number)
       track('Purchase', { content_ids: [productId], value: body.total, currency: 'DZD' })
       setTimeout(() => doneRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 50)
