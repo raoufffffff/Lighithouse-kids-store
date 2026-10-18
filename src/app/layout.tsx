@@ -1,8 +1,9 @@
 import type { Metadata, Viewport } from 'next'
-import Header from '@/components/Header'
+import SiteHeader from '@/components/SiteHeader'
 import PixelScripts from '@/components/Pixels'
 import { DEFAULT_LOGO } from '@/components/Logo'
-import { getPixels, getStore } from '@/lib/data'
+import { getCategories, getHomeLayout, getPixels, getProducts, getStore } from '@/lib/data'
+import { DEFAULT_HEADER } from '@/lib/home-layout'
 import './globals.css'
 
 export const dynamic = 'force-static'
@@ -29,11 +30,15 @@ export const viewport: Viewport = {
 }
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  const [store, pixels] = await Promise.all([getStore(), getPixels()])
+  const [store, pixels, home, products, categories] = await Promise.all([getStore(), getPixels(), getHomeLayout(), getProducts(), getCategories()])
+  const ctx = {
+    products: products.map((p) => ({ id: p.id, slug: p.slug })),
+    categories: categories.map((c) => ({ id: c.id, slug: c.slug })),
+  }
   return (
     <html lang="ar" dir="rtl">
       <body>
-        <Header store={store} />
+        <SiteHeader store={store} config={home?.header ?? DEFAULT_HEADER} ctx={ctx} />
         {children}
         <footer className="mt-16 bg-ink px-4 py-8 text-center text-sm text-brand-100">
           <p className="font-bold text-white" dir="auto">

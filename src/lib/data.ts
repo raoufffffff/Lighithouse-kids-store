@@ -1,5 +1,7 @@
-import type { Offer, PageCode, Pixels, Product, ProductCardData, Rate, StoreInfo, Variant } from './types'
+import type { CategoryData, Offer, PageCode, Pixels, Product, ProductCardData, Rate, StoreInfo, Variant } from './types'
 
+import { normalizeHomeLayout } from './home-layout'
+import type { HomeLayout } from './home-layout'
 import { normalizePageContent } from './page-content'
 import { SUPABASE_KEY, SUPABASE_URL } from './public-env'
 
@@ -28,7 +30,7 @@ const DEFAULT_STORE: StoreInfo = {
 type SettingRow = { key: string; value: Record<string, unknown> }
 
 async function getSettings(): Promise<SettingRow[]> {
-  return rest<SettingRow[]>('lh_store_settings?select=key,value&key=in.(store,facebook_pixel,tiktok_pixel)')
+  return rest<SettingRow[]>('lh_store_settings?select=key,value&key=in.(store,facebook_pixel,tiktok_pixel,home_layout)')
 }
 
 export async function getStore(): Promise<StoreInfo> {
@@ -63,12 +65,13 @@ type ProductRow = {
   compare_at_price: number | string | null
   images: string[] | null
   is_featured: boolean
+  category_id: string | null
   lh_categories: { name: string } | null
 }
 
 export async function getProducts(): Promise<ProductCardData[]> {
   const rows = await rest<ProductRow[]>(
-    'lh_products?select=id,name,slug,base_price,compare_at_price,images,is_featured,lh_categories(name)' +
+    'lh_products?select=id,name,slug,base_price,compare_at_price,images,is_featured,category_id,lh_categories(name)' +
       '&is_active=eq.true&order=is_featured.desc,created_at.desc',
   )
   return rows.map((r) => ({
@@ -80,7 +83,21 @@ export async function getProducts(): Promise<ProductCardData[]> {
     images: r.images ?? [],
     is_featured: r.is_featured,
     category: r.lh_categories?.name ?? null,
+    category_id: r.category_id ?? null,
   }))
+}
+
+export async function getCategories(): Promise<CategoryData[]> {
+  const rows = await rest<{ id: string; name: string; slug: string; image_url: string | null }[]>(
+    'lh_categories?select=id,name,slug,image_url&is_active=eq.true&order=sort_order,name',
+  )
+  return rows.map((r) => ({ id: r.id, name: r.name, slug: r.slug, image_url: r.image_url || null }))
+}
+
+/** Published home page + header. null = keep the built-in design. */
+export async function getHomeLayout(): Promise<HomeLayout | null> {
+  const row = (await getSettings()).find((r) => r.key === 'home_layout')
+  return normalizeHomeLayout(row?.value)
 }
 
 type ProductFull = Omit<ProductRow, 'lh_categories'> & {

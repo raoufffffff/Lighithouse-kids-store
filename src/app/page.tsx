@@ -1,7 +1,8 @@
 import Link from 'next/link'
 import Logo from '@/components/Logo'
 import ProductCard from '@/components/ProductCard'
-import { getProducts, getStore } from '@/lib/data'
+import HomeSections from '@/components/HomeSections'
+import { getCategories, getHomeLayout, getProducts, getStore } from '@/lib/data'
 
 export const dynamic = 'force-static'
 
@@ -13,7 +14,8 @@ const perks = [
 ]
 
 export default async function Home() {
-  const [store, products] = await Promise.all([getStore(), getProducts()])
+  const [store, products, categories, layout] = await Promise.all([getStore(), getProducts(), getCategories(), getHomeLayout()])
+  if (layout) return <HomeSections sections={layout.sections} products={products} categories={categories} store={store} />
 
   return (
     <main>

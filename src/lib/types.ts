@@ -16,7 +16,10 @@ export type ProductCardData = {
   images: string[]
   is_featured: boolean
   category: string | null
+  category_id: string | null
 }
+
+export type CategoryData = { id: string; name: string; slug: string; image_url: string | null }
 
 export type Variant = {
   id: string
