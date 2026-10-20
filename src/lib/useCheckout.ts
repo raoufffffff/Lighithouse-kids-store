@@ -147,7 +147,7 @@ export function useCheckout({ productId, productName, basePrice, variants, offer
   const begin = () => {
     if (started.current) return
     started.current = true
-    track('InitiateCheckout', { content_ids: [productId], value: total, currency: 'DZD' })
+    track('InitiateCheckout', { content_ids: [productId], content_type: 'product', num_items: qty, value: total, currency: 'DZD' })
   }
 
   const submit = async (e: FormEvent) => {
@@ -192,7 +192,15 @@ export function useCheckout({ productId, productName, basePrice, variants, offer
       setStatus('done')
       cartDone(cartSession())
       if (ab && body.order_number > 0) abTrack(ab.variantId, 'order', body.order_number)
-      track('Purchase', { content_ids: [productId], value: body.total, currency: 'DZD' })
+      // Purchase fires only here, after the order was really accepted (never on page load).
+      // The order number doubles as the event id so a server-side copy would be de-duplicated.
+      if (body.order_number > 0) {
+        track(
+          'Purchase',
+          { content_ids: [productId], content_type: 'product', contents: [{ id: productId, quantity: qty }], num_items: qty, value: body.total, currency: 'DZD' },
+          `purchase_${body.order_number}`,
+        )
+      }
       setTimeout(() => doneRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 50)
     } catch {
       setError('لا يوجد اتصال بالإنترنت، حاول مرة أخرى')
