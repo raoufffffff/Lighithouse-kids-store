@@ -51,3 +51,18 @@ export function cartSession(): string {
 
 export const saveCart = (body: Record<string, unknown>) => rpc('lh_save_cart', body)
 export const cartDone = (session: string) => session && rpc('lh_cart_done', { p_session: session })
+
+const BOT = /bot|crawl|spider|slurp|headless|lighthouse|pagespeed|facebookexternalhit|preview|monitor/i
+
+/** One product-page visit (server dedupes the same visitor per product for 30 minutes). Never throws. */
+export function trackVisit(productId: string) {
+  try {
+    if (window.location.pathname.startsWith('/preview')) return
+    if (navigator.webdriver || BOT.test(navigator.userAgent)) return
+    const sid = cartSession()
+    if (!sid || sid.length < 8) return
+    rpc('lh_track_visit', { p_product: productId, p_visitor: sid })
+  } catch {
+    /* best effort */
+  }
+}

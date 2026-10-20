@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import AbRunner from '@/components/AbRunner'
+import VisitTracker from '@/components/VisitTracker'
 import type { RunnerVariant } from '@/components/AbRunner'
 import { getAbSlugs, getAbTest, getRates, parseCode } from '@/lib/data'
 import { normalizePageContent } from '@/lib/page-content'
@@ -25,5 +26,10 @@ export default async function AbPage({ params }: Params) {
     .filter((v) => v.code || v.content)
   if (variants.length === 0) notFound()
 
-  return <AbRunner testId={test.id} variants={variants} product={test.product} rates={rates} />
+  return (
+    <>
+      <VisitTracker productId={test.product.id} />
+      <AbRunner testId={test.id} variants={variants} product={test.product} rates={rates} />
+    </>
+  )
 }

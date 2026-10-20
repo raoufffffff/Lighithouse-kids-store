@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import ProductView from '@/components/ProductView'
+import VisitTracker from '@/components/VisitTracker'
 import { getProduct, getProducts, getRates } from '@/lib/data'
 
 export const dynamic = 'force-static'
@@ -36,5 +37,10 @@ export default async function ProductPage({ params }: Params) {
   const [product, rates] = await Promise.all([getProduct(slug), getRates()])
   if (!product) notFound()
 
-  return <ProductView product={product} rates={rates} content={product.page_content} code={product.page_code} />
+  return (
+    <>
+      <VisitTracker productId={product.id} />
+      <ProductView product={product} rates={rates} content={product.page_content} code={product.page_code} />
+    </>
+  )
 }
